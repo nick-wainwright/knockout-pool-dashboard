@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Knockout Command — Dashboard</title>
+<title>Knockout Command</title>
 <style>
   :root{
     --field-dark:#0f2818; --field:#1b4332; --field-light:#2d6a4f;
@@ -12,7 +12,7 @@
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:var(--field-dark); color:var(--chalk); font-family:var(--sans); padding:28px 18px 60px;}
+  body{margin:0; background:var(--field-dark); color:var(--chalk); font-family:var(--sans); padding:28px 18px 60px; line-height:1.45;}
   .wrap{max-width:960px; margin:0 auto;}
   .hero{border-bottom:3px solid var(--gold); padding-bottom:16px; margin-bottom:26px;}
   h1{font-size:2.2rem; margin:0 0 4px; font-weight:800; letter-spacing:-0.02em;}
@@ -20,220 +20,499 @@
   h2{font-size:1rem; color:var(--gold); border-left:4px solid var(--gold); padding-left:10px; margin:0 0 14px;}
   section{margin-bottom:32px;}
 
-  .loader{
-    background:var(--field); border:1px dashed var(--line); border-radius:6px;
-    padding:20px; text-align:center; margin-bottom:24px;
-  }
-  .loader.hidden{display:none;}
-  .loader p{color:var(--chalk-dim); margin:0 0 12px; font-size:.85rem;}
-  input[type=file]{color:var(--chalk-dim); font-size:.85rem;}
-
-  #dashboard{display:none;}
-  #dashboard.visible{display:block;}
-
   .entries{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px;}
   .entry-card{background:var(--field); border-radius:6px; padding:16px; border:1px solid var(--line);}
   .entry-card.eliminated{opacity:.45;}
-  .entry-card h3{margin:0 0 8px; font-size:1.05rem;}
+  .entry-card input.name{background:transparent; border:none; border-bottom:1px dashed var(--chalk-dim); color:var(--chalk); font-weight:700; font-size:1.05rem; padding:2px 0; width:100%; margin-bottom:10px;}
+  .entry-card input.name:focus{outline:none; border-bottom-color:var(--gold);}
   .chips{display:flex; flex-wrap:wrap; gap:6px; min-height:26px; margin-bottom:10px;}
   .chip{background:var(--field-light); border:1px solid var(--line); border-radius:3px; padding:2px 8px; font-size:.78rem; font-family:var(--mono);}
   .chip.empty{color:var(--chalk-dim); font-style:italic; font-family:var(--sans); border:none; background:none; padding:0;}
   .entry-meta{font-size:.78rem; color:var(--chalk-dim); display:flex; justify-content:space-between; margin-bottom:8px;}
-  .entry-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
-  button{font-family:var(--sans); cursor:pointer; border:1px solid var(--line); background:var(--field-light); color:var(--chalk); border-radius:4px; padding:6px 10px; font-size:.78rem;}
+  .entry-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  button{font-family:var(--sans); cursor:pointer; border:1px solid var(--line); background:var(--field-light); color:var(--chalk); border-radius:4px; padding:7px 12px; font-size:.8rem;}
   button:hover{border-color:var(--gold);}
   button.primary{background:var(--gold); color:var(--field-dark); font-weight:700; border-color:var(--gold);}
+  button.primary:disabled{opacity:.5; cursor:default;}
   button.danger-btn{color:var(--danger); border-color:var(--danger); background:transparent;}
+
+  .setup-box{background:var(--field); border-radius:6px; padding:16px; border:1px solid var(--line);}
+  .setup-box label{display:block; font-size:.78rem; color:var(--chalk-dim); margin-bottom:6px;}
+  .setup-box input[type=text], .setup-box input[type=password]{
+    width:100%; max-width:420px; background:var(--field-dark); border:1px solid var(--line);
+    color:var(--chalk); padding:8px 10px; border-radius:4px; font-family:var(--mono); font-size:.85rem;
+  }
+  .setup-box a{color:var(--gold);}
+  .setup-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;}
+
+  .status-line{font-size:.8rem; color:var(--chalk-dim); margin:10px 0; white-space:pre-line;}
+  .status-line.error{color:var(--danger);}
 
   table{width:100%; border-collapse:collapse; font-size:.85rem;}
   th{text-align:left; font-weight:600; color:var(--chalk-dim); font-size:.72rem; padding:6px 8px; border-bottom:1px solid var(--line);}
-  td{padding:6px 8px; border-bottom:1px solid var(--line);}
+  td{padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  td select, td input[type=text]{width:100%; background:var(--field); border:1px solid var(--line); color:var(--chalk); padding:5px 6px; border-radius:4px; font-family:var(--sans); font-size:.8rem;}
 
-  .add-pick{background:var(--field); border-radius:6px; padding:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:14px;}
-  .add-pick label{display:block; font-size:.72rem; color:var(--chalk-dim); margin-bottom:4px;}
-  .add-pick input, .add-pick select{background:var(--field-dark); border:1px solid var(--line); color:var(--chalk); padding:6px 8px; border-radius:4px; font-family:var(--sans); font-size:.85rem;}
+  .toggle-row{display:flex; gap:18px; align-items:center; margin:14px 0; flex-wrap:wrap; font-size:.82rem; color:var(--chalk-dim);}
+  .toggle-row label{display:flex; align-items:center; gap:6px;}
 
-  .export-bar{display:flex; gap:10px; align-items:center; margin-top:24px; flex-wrap:wrap;}
-  .export-bar span{font-size:.78rem; color:var(--chalk-dim);}
+  .rec-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:16px;}
+  .rec-card{background:var(--field); border-radius:6px; padding:16px; border-left:4px solid var(--gold);}
+  .rec-card h3{margin:0 0 4px; font-size:1rem;}
+  .rec-pick{font-family:var(--mono); font-size:1.3rem; font-weight:700; color:var(--gold); margin:6px 0;}
+  .rec-prob{font-size:.78rem; color:var(--chalk-dim); margin-bottom:8px;}
+  .rec-reason{font-size:.8rem; color:var(--chalk-dim);}
+  .rec-card.warn{border-left-color:var(--danger);}
+  .rec-card.warn .rec-pick{color:var(--danger);}
 
+  .history{font-size:.82rem; color:var(--chalk-dim); max-height:220px; overflow:auto;}
   footer{color:var(--chalk-dim); font-size:.72rem; margin-top:40px; border-top:1px solid var(--line); padding-top:14px;}
+  .save-status{font-size:.72rem; color:var(--chalk-dim); float:right;}
+  code{background:var(--field-light); padding:1px 5px; border-radius:3px; font-size:.85em;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="hero">
     <h1>Knockout Command</h1>
-    <div class="tagline">A visual read on your 3-entry pool state. This is a local file viewer/editor for the same <code>config.json</code> the CLI tool reads — nothing here fetches live odds; run <code>main.py</code> for that.</div>
+    <div class="tagline">Live weekly picks for your 3-entry Knockout Pool. Pulls real odds, checks weather, ranks the best available team per entry, and remembers what you've used — all in this browser.</div>
   </div>
 
-  <div class="loader" id="loaderBox">
-    <p>Load your <code>config.json</code> (found in the knockout_pool folder) to see your pool status.</p>
-    <input type="file" id="fileInput" accept="application/json">
-  </div>
-
-  <div id="dashboard">
-    <section>
-      <h2>Entries</h2>
-      <div class="entries" id="entriesWrap"></div>
-    </section>
-
-    <section>
-      <h2>Record a pick manually</h2>
-      <div class="add-pick">
-        <div>
-          <label>Entry</label>
-          <select id="pickEntry"></select>
-        </div>
-        <div>
-          <label>Team</label>
-          <input type="text" id="pickTeam" placeholder="e.g. Kansas City Chiefs">
-        </div>
-        <div>
-          <label>Week</label>
-          <input type="number" id="pickWeek" min="1" max="18" value="1" style="width:70px">
-        </div>
-        <button class="primary" id="addPickBtn">Lock pick</button>
+  <section>
+    <h2>Setup<span class="save-status" id="saveStatus"></span></h2>
+    <div class="setup-box">
+      <label for="apiKey">Odds API key (free at <a href="https://the-odds-api.com" target="_blank">the-odds-api.com</a>)</label>
+      <input type="password" id="apiKey" placeholder="paste your key here">
+      <div class="setup-row">
+        <button class="primary" id="saveKeyBtn">Save key to this browser</button>
+        <span style="font-size:.75rem;color:var(--chalk-dim)">Stored only on this device (localStorage) — never sent anywhere except directly to the odds API when you fetch.</span>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section>
-      <h2>Pick history</h2>
+  <section>
+    <h2>Your Entries</h2>
+    <div class="entries" id="entriesWrap"></div>
+  </section>
+
+  <section>
+    <h2>This Week's Board</h2>
+    <div class="toggle-row">
+      <button class="primary" id="fetchBtn">Fetch live board</button>
+      <label><input type="checkbox" id="diversifyToggle"> Diversify entries when the gap is small (&lt;5 pts)</label>
+    </div>
+    <div class="status-line" id="statusLine"></div>
+
+    <table id="gamesTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Favorite</th><th>Opponent</th><th>Win %</th><th>Weather</th><th>Favorite injury</th><th>Opp. missing starter?</th>
+        </tr>
+      </thead>
+      <tbody id="gamesBody"></tbody>
+    </table>
+
+    <button class="primary" id="generateBtn" style="display:none; margin-top:12px;">Generate picks</button>
+    <div class="rec-grid" id="recGrid"></div>
+  </section>
+
+  <section>
+    <h2>Pick Log</h2>
+    <div class="history">
       <table>
-        <thead><tr><th>Week</th><th>Entry</th><th>Team</th></tr></thead>
+        <thead><tr><th>Week</th><th>Entry</th><th>Team picked</th></tr></thead>
         <tbody id="historyBody"></tbody>
       </table>
-    </section>
-
-    <div class="export-bar">
-      <button class="primary" id="exportBtn">Download updated config.json</button>
-      <span>Save this over the file in your knockout_pool folder so the CLI picks up your changes.</span>
     </div>
-  </div>
+  </section>
 
   <footer>
-    This page never talks to the network — everything happens in your browser and nothing is uploaded anywhere. Loading a file just reads it into memory; nothing is saved back to disk until you click "Download" and choose where to put it.
+    Odds come from The Odds API, filtered to games in the current NFL week (Tuesday-to-Tuesday) so a future week's line can't outrank this week's real options. Weather comes from Open-Meteo for outdoor stadiums only (skipped within ~16 days of kickoff isn't guaranteed — recheck close to game day). Injury status is attempted from ESPN's public data and may not always load in a browser; if it doesn't, just set it by hand from the real injury report. Nothing you enter here is sent anywhere except the two API calls needed to fetch odds and weather.
   </footer>
 </div>
 
 <script>
-let state = null;
+const STORAGE_KEY = 'ko-pool-state-v2';
+const API_KEY_STORAGE = 'ko-pool-odds-api-key';
 
-document.getElementById('fileInput').addEventListener('change', (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (evt)=>{
-    try{
-      state = JSON.parse(evt.target.result);
-      if(!state.entries) throw new Error('missing entries');
-      document.getElementById('loaderBox').classList.add('hidden');
-      document.getElementById('dashboard').classList.add('visible');
-      render();
-    }catch(err){
-      alert('That doesn\'t look like a valid config.json: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
+let state = {
+  entries: [
+    {id:1, name:'Entry 1', used:[], eliminated:false, byeWeek:null},
+    {id:2, name:'Entry 2', used:[], eliminated:false, byeWeek:null},
+    {id:3, name:'Entry 3', used:[], eliminated:false, byeWeek:null},
+  ],
+  history: [],
+};
+let games = []; // current week's editable board
+
+// ---------- persistence ----------
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) state = Object.assign(state, JSON.parse(raw));
+  }catch(e){ /* ignore, start fresh */ }
+  const key = localStorage.getItem(API_KEY_STORAGE);
+  if(key) document.getElementById('apiKey').value = key;
+}
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const el = document.getElementById('saveStatus');
+    el.textContent = 'saved';
+    setTimeout(()=>{ el.textContent=''; }, 1200);
+  }catch(e){ /* storage full or blocked, non-fatal */ }
+}
+
+document.getElementById('saveKeyBtn').addEventListener('click', ()=>{
+  const val = document.getElementById('apiKey').value.trim();
+  if(!val){ alert('Paste your API key first.'); return; }
+  localStorage.setItem(API_KEY_STORAGE, val);
+  alert('Key saved to this browser.');
 });
 
+// ---------- stadiums (for weather lookups) ----------
+const STADIUMS = {
+  "Arizona Cardinals":[33.5276,-112.2626,"retractable"], "Atlanta Falcons":[33.7554,-84.4008,"dome"],
+  "Baltimore Ravens":[39.2780,-76.6227,"outdoor"], "Buffalo Bills":[42.7738,-78.7870,"outdoor"],
+  "Carolina Panthers":[35.2258,-80.8528,"outdoor"], "Chicago Bears":[41.8623,-87.6167,"outdoor"],
+  "Cincinnati Bengals":[39.0954,-84.5160,"outdoor"], "Cleveland Browns":[41.5061,-81.6995,"outdoor"],
+  "Dallas Cowboys":[32.7473,-97.0945,"retractable"], "Denver Broncos":[39.7439,-105.0201,"outdoor"],
+  "Detroit Lions":[42.3400,-83.0456,"dome"], "Green Bay Packers":[44.5013,-88.0622,"outdoor"],
+  "Houston Texans":[29.6847,-95.4107,"retractable"], "Indianapolis Colts":[39.7601,-86.1639,"retractable"],
+  "Jacksonville Jaguars":[30.3239,-81.6373,"outdoor"], "Kansas City Chiefs":[39.0489,-94.4839,"outdoor"],
+  "Las Vegas Raiders":[36.0909,-115.1833,"dome"], "Los Angeles Chargers":[33.9535,-118.3392,"dome"],
+  "Los Angeles Rams":[33.9535,-118.3392,"dome"], "Miami Dolphins":[25.9580,-80.2389,"outdoor"],
+  "Minnesota Vikings":[44.9738,-93.2581,"dome"], "New England Patriots":[42.0909,-71.2643,"outdoor"],
+  "New Orleans Saints":[29.9511,-90.0812,"dome"], "New York Giants":[40.8135,-74.0745,"outdoor"],
+  "New York Jets":[40.8135,-74.0745,"outdoor"], "Philadelphia Eagles":[39.9008,-75.1675,"outdoor"],
+  "Pittsburgh Steelers":[40.4468,-80.0158,"outdoor"], "San Francisco 49ers":[37.4032,-121.9698,"outdoor"],
+  "Seattle Seahawks":[47.5952,-122.3316,"outdoor"], "Tampa Bay Buccaneers":[27.9759,-82.5033,"outdoor"],
+  "Tennessee Titans":[36.1665,-86.7713,"outdoor"], "Washington Commanders":[38.9076,-76.8645,"outdoor"],
+};
+function isOutdoor(team){ const s = STADIUMS[team]; return s ? s[2] === "outdoor" : true; }
+function coordsFor(team){ const s = STADIUMS[team]; return s ? [s[0], s[1]] : null; }
+
+// ---------- odds ----------
+function americanToProb(price){
+  return price < 0 ? (-price/(-price+100)) : (100/(price+100));
+}
+function currentNflWeekWindow(){
+  const now = new Date();
+  const day = now.getUTCDay(); // Sun=0 ... Tue=2
+  const daysSinceTuesday = (day - 2 + 7) % 7;
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceTuesday));
+  const end = new Date(start.getTime() + 7*24*60*60*1000);
+  return [start, end];
+}
+async function fetchOdds(apiKey){
+  const url = `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?apiKey=${encodeURIComponent(apiKey)}&regions=us&markets=h2h&oddsFormat=american`;
+  const resp = await fetch(url);
+  if(!resp.ok){
+    const text = await resp.text().catch(()=> '');
+    throw new Error(`Odds API returned ${resp.status}: ${text.slice(0,200)}`);
+  }
+  const raw = await resp.json();
+  const [start, end] = currentNflWeekWindow();
+  const inWindow = raw.filter(g=>{
+    const t = new Date(g.commence_time);
+    return t >= start && t < end;
+  });
+
+  const parsed = [];
+  for(const g of inWindow){
+    const home = g.home_team, away = g.away_team;
+    let homePrices=[], awayPrices=[];
+    for(const book of (g.bookmakers||[])){
+      for(const market of (book.markets||[])){
+        if(market.key !== 'h2h') continue;
+        for(const outcome of (market.outcomes||[])){
+          if(outcome.name === home) homePrices.push(outcome.price);
+          else if(outcome.name === away) awayPrices.push(outcome.price);
+        }
+      }
+    }
+    if(!homePrices.length || !awayPrices.length) continue;
+    const homeRaw = homePrices.reduce((a,p)=>a+americanToProb(p),0)/homePrices.length;
+    const awayRaw = awayPrices.reduce((a,p)=>a+americanToProb(p),0)/awayPrices.length;
+    const total = homeRaw + awayRaw;
+    parsed.push({
+      home, away, commence_time: g.commence_time,
+      homeProb: (homeRaw/total)*100, awayProb: (awayRaw/total)*100,
+    });
+  }
+  return {games: parsed, totalReturned: raw.length, window: [start,end]};
+}
+
+// ---------- weather ----------
+function classifyWeather(tempF, windMph, precipMm){
+  if(precipMm >= 4 && tempF <= 34) return 'snow';
+  if(precipMm >= 4) return 'rain';
+  if(windMph >= 20) return 'wind';
+  if(tempF <= 20) return 'cold';
+  return 'clear';
+}
+async function fetchWeather(lat, lon, kickoffIso){
+  const kickoff = new Date(kickoffIso);
+  const dateStr = kickoff.toISOString().slice(0,10);
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,windspeed_10m&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=UTC&start_date=${dateStr}&end_date=${dateStr}`;
+  try{
+    const resp = await fetch(url);
+    if(!resp.ok) return null;
+    const data = await resp.json();
+    const times = data.hourly?.time || [];
+    if(!times.length) return null;
+    let bestIdx = 0, bestDiff = Infinity;
+    times.forEach((t,i)=>{
+      const diff = Math.abs(new Date(t) - kickoff);
+      if(diff < bestDiff){ bestDiff = diff; bestIdx = i; }
+    });
+    return classifyWeather(data.hourly.temperature_2m[bestIdx], data.hourly.windspeed_10m[bestIdx], data.hourly.precipitation[bestIdx]);
+  }catch(e){ return null; }
+}
+
+// ---------- injuries (best-effort, may fail from browser -- that's fine) ----------
+let espnTeamIdCache = null;
+async function loadEspnTeamIds(){
+  if(espnTeamIdCache) return espnTeamIdCache;
+  espnTeamIdCache = {};
+  try{
+    const resp = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams');
+    const data = await resp.json();
+    for(const t of data.sports[0].leagues[0].teams){
+      espnTeamIdCache[t.team.displayName] = t.team.id;
+    }
+  }catch(e){ /* ESPN endpoint may block cross-origin browser requests -- fail quietly */ }
+  return espnTeamIdCache;
+}
+async function fetchInjuryFlag(team){
+  const ids = await loadEspnTeamIds();
+  const id = ids[team];
+  if(!id) return 'none';
+  try{
+    const resp = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${id}/injuries`);
+    if(!resp.ok) return 'none';
+    const data = await resp.json();
+    const rank = {none:0, minor:1, starter:2, qb:3};
+    let worst = 'none';
+    for(const item of (data.injuries||[])){
+      const pos = item.athlete?.position?.abbreviation || '';
+      const status = (item.status||'').toLowerCase();
+      if(status !== 'out' && status !== 'doubtful') continue;
+      let level = 'minor';
+      if(pos === 'QB') level = 'qb';
+      else if(['WR','RB','OT','OG','C','LT','RT'].includes(pos)) level = 'starter';
+      if(rank[level] > rank[worst]) worst = level;
+    }
+    return worst;
+  }catch(e){ return 'none'; }
+}
+
+// ---------- scoring ----------
+const WEATHER_PENALTY = { clear:0, dome:0, null:0, wind:-3, rain:-6, snow:-8, cold:-4 };
+const INJURY_PENALTY = { none:0, minor:-2, starter:-5, qb:-12 };
+function adjustedProb(g){
+  let p = g.prob;
+  p += WEATHER_PENALTY[g.weather] ?? 0;
+  p += INJURY_PENALTY[g.injury] ?? 0;
+  if(g.oppInjury) p += 4;
+  return Math.max(1, Math.min(99, p));
+}
+
+// ---------- rendering ----------
 function render(){
   renderEntries();
   renderHistory();
-  renderPickEntryOptions();
 }
-
 function renderEntries(){
   const wrap = document.getElementById('entriesWrap');
   wrap.innerHTML = '';
-  state.entries.forEach((entry, idx)=>{
+  state.entries.forEach(entry=>{
     const card = document.createElement('div');
     card.className = 'entry-card' + (entry.eliminated ? ' eliminated' : '');
-    const used = entry.used || [];
-    const usedChips = used.length
-      ? used.map(t=>`<span class="chip">${t}</span>`).join('')
+    const usedChips = entry.used.length
+      ? entry.used.map(t=>`<span class="chip">${t}</span>`).join('')
       : `<span class="chip empty">no teams used yet</span>`;
     card.innerHTML = `
-      <h3>${entry.name}</h3>
+      <input class="name" value="${entry.name}" data-id="${entry.id}">
       <div class="entry-meta">
         <span>${entry.eliminated ? 'ELIMINATED' : 'Active'}</span>
-        <span>${entry.bye_week ? 'Bye: Wk '+entry.bye_week : 'Bye not used'}</span>
+        <span>${entry.byeWeek ? 'Bye used: Wk '+entry.byeWeek : 'Bye not used'}</span>
       </div>
       <div class="chips">${usedChips}</div>
       <div class="entry-actions">
-        <button data-action="bye" data-idx="${idx}">Set bye week</button>
-        <button class="${entry.eliminated?'':'danger-btn'}" data-action="toggle-elim" data-idx="${idx}">${entry.eliminated?'Reactivate':'Mark eliminated'}</button>
-      </div>
-    `;
+        <button data-action="bye" data-id="${entry.id}">Set bye = this week</button>
+        <button class="${entry.eliminated?'':'danger-btn'}" data-action="toggle-elim" data-id="${entry.id}">${entry.eliminated?'Reactivate':'Mark eliminated'}</button>
+      </div>`;
     wrap.appendChild(card);
   });
-
+  wrap.querySelectorAll('input.name').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const entry = state.entries.find(x=>x.id==e.target.dataset.id);
+      entry.name = e.target.value || entry.name;
+      render(); saveState();
+    });
+  });
   wrap.querySelectorAll('[data-action="toggle-elim"]').forEach(btn=>{
     btn.addEventListener('click', e=>{
-      const idx = parseInt(e.target.dataset.idx);
-      state.entries[idx].eliminated = !state.entries[idx].eliminated;
-      render();
+      const entry = state.entries.find(x=>x.id==e.target.dataset.id);
+      entry.eliminated = !entry.eliminated;
+      render(); saveState();
     });
   });
   wrap.querySelectorAll('[data-action="bye"]').forEach(btn=>{
     btn.addEventListener('click', e=>{
+      const entry = state.entries.find(x=>x.id==e.target.dataset.id);
+      const [start] = currentNflWeekWindow();
+      // rough week number isn't tracked here -- just record the date range label
+      const label = prompt('Which week number is this bye for? (must be 6-12)');
+      const n = parseInt(label);
+      if(isNaN(n) || n < 6 || n > 12){ alert('Bye weeks only apply weeks 6-12.'); return; }
+      entry.byeWeek = n;
+      render(); saveState();
+    });
+  });
+}
+function renderHistory(){
+  const body = document.getElementById('historyBody');
+  if(!state.history.length){
+    body.innerHTML = '<tr><td colspan="3" style="color:var(--chalk-dim)">No picks locked yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = [...state.history].reverse().map(h=>`<tr><td>${h.week}</td><td>${h.entryName}</td><td>${h.team}</td></tr>`).join('');
+}
+
+function renderGamesTable(){
+  const table = document.getElementById('gamesTable');
+  const body = document.getElementById('gamesBody');
+  if(!games.length){ table.style.display='none'; document.getElementById('generateBtn').style.display='none'; return; }
+  table.style.display = '';
+  document.getElementById('generateBtn').style.display = '';
+  body.innerHTML = games.map((g,i)=>`
+    <tr>
+      <td>${g.team}</td>
+      <td>${g.opponent}</td>
+      <td>${g.prob.toFixed(1)}%</td>
+      <td>
+        <select data-idx="${i}" data-field="weather">
+          ${['clear','dome','wind','rain','snow','cold'].map(w=>`<option value="${w}" ${g.weather===w?'selected':''}>${w}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select data-idx="${i}" data-field="injury">
+          ${['none','minor','starter','qb'].map(inj=>`<option value="${inj}" ${g.injury===inj?'selected':''}>${inj}</option>`).join('')}
+        </select>
+      </td>
+      <td style="text-align:center"><input type="checkbox" data-idx="${i}" data-field="oppInjury" ${g.oppInjury?'checked':''}></td>
+    </tr>
+  `).join('');
+  body.querySelectorAll('select,input').forEach(el=>{
+    const evt = el.type === 'checkbox' ? 'change' : 'change';
+    el.addEventListener(evt, e=>{
       const idx = parseInt(e.target.dataset.idx);
-      const wk = prompt('Bye week (must be 6-12):', state.entries[idx].bye_week || '');
-      if(wk === null) return;
-      const n = parseInt(wk);
-      if(isNaN(n) || n < 6 || n > 12){
-        alert('Bye weeks can only be set between Week 6 and Week 12.');
-        return;
-      }
-      state.entries[idx].bye_week = n;
-      render();
+      const field = e.target.dataset.field;
+      games[idx][field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     });
   });
 }
 
-function renderPickEntryOptions(){
-  const sel = document.getElementById('pickEntry');
-  sel.innerHTML = state.entries.map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');
+function setStatus(msg, isError){
+  const el = document.getElementById('statusLine');
+  el.textContent = msg;
+  el.className = 'status-line' + (isError ? ' error' : '');
 }
 
-function renderHistory(){
-  const body = document.getElementById('historyBody');
-  const hist = state.history || [];
-  if(hist.length === 0){
-    body.innerHTML = '<tr><td colspan="3" style="color:var(--chalk-dim)">No picks recorded yet.</td></tr>';
-    return;
-  }
-  body.innerHTML = [...hist].reverse().map(h=>`<tr><td>${h.week}</td><td>${h.entry}</td><td>${h.team}</td></tr>`).join('');
-}
+document.getElementById('fetchBtn').addEventListener('click', async ()=>{
+  const apiKey = document.getElementById('apiKey').value.trim() || localStorage.getItem(API_KEY_STORAGE);
+  if(!apiKey){ setStatus('Enter and save your API key first.', true); return; }
+  document.getElementById('fetchBtn').disabled = true;
+  document.getElementById('recGrid').innerHTML = '';
+  setStatus('Fetching odds...');
+  try{
+    const {games: oddsGames, totalReturned, window} = await fetchOdds(apiKey);
+    const wLabel = `${window[0].toDateString()} - ${window[1].toDateString()}`;
+    setStatus(`API returned ${totalReturned} games with posted lines; ${oddsGames.length} fall within ${wLabel} (this NFL week).\nChecking weather and injuries...`);
 
-document.getElementById('addPickBtn').addEventListener('click', ()=>{
-  const idx = parseInt(document.getElementById('pickEntry').value);
-  const team = document.getElementById('pickTeam').value.trim();
-  const week = parseInt(document.getElementById('pickWeek').value);
-  if(!team){ alert('Enter a team name.'); return; }
-  const entry = state.entries[idx];
-  entry.used = entry.used || [];
-  if(entry.used.includes(team)){
-    alert(`${entry.name} has already used ${team} this season.`);
-    return;
+    games = [];
+    for(const g of oddsGames){
+      let weather = null;
+      if(isOutdoor(g.home)){
+        const coords = coordsFor(g.home);
+        if(coords) weather = await fetchWeather(coords[0], coords[1], g.commence_time);
+      }
+      const homeInjury = await fetchInjuryFlag(g.home);
+      const awayInjury = await fetchInjuryFlag(g.away);
+      games.push({team:g.home, opponent:g.away, prob:g.homeProb, weather, injury:homeInjury, oppInjury: awayInjury==='starter'||awayInjury==='qb'});
+      games.push({team:g.away, opponent:g.home, prob:g.awayProb, weather, injury:awayInjury, oppInjury: homeInjury==='starter'||homeInjury==='qb'});
+    }
+    setStatus(`Loaded ${oddsGames.length} games. Review/adjust weather or injury flags below if anything looks off, then generate picks.`);
+    renderGamesTable();
+  }catch(err){
+    setStatus('Could not fetch odds: ' + err.message, true);
   }
-  entry.used.push(team);
-  state.history = state.history || [];
-  state.history.push({week, entry: entry.name, team});
-  document.getElementById('pickTeam').value = '';
-  render();
+  document.getElementById('fetchBtn').disabled = false;
 });
 
-document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'config.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+document.getElementById('generateBtn').addEventListener('click', ()=>{
+  const diversify = document.getElementById('diversifyToggle').checked;
+  const ranked = games.map(g=>({...g, score: adjustedProb(g)})).sort((a,b)=>b.score-a.score);
+  const recGrid = document.getElementById('recGrid');
+  recGrid.innerHTML = '';
+  const chosenThisRound = [];
+  // rough current week number for the log, based on the window start
+  const [start] = currentNflWeekWindow();
+
+  state.entries.forEach(entry=>{
+    const card = document.createElement('div');
+    if(entry.eliminated){
+      card.className = 'rec-card warn';
+      card.innerHTML = `<h3>${entry.name}</h3><div class="rec-pick">—</div><div class="rec-reason">Eliminated.</div>`;
+      recGrid.appendChild(card); return;
+    }
+    const options = ranked.filter(g => !entry.used.includes(g.team));
+    if(!options.length){
+      card.className = 'rec-card warn';
+      card.innerHTML = `<h3>${entry.name}</h3><div class="rec-pick">No team left</div><div class="rec-reason">Every favorite on this board is already used by this entry.</div>`;
+      recGrid.appendChild(card); return;
+    }
+    let pick = options[0];
+    if(diversify){
+      const alt = options.find(o => !chosenThisRound.includes(o.team) && (options[0].score - o.score) < 5);
+      if(alt) pick = alt;
+    }
+    chosenThisRound.push(pick.team);
+
+    const flags = [];
+    if(pick.weather && pick.weather !== 'clear' && pick.weather !== 'dome') flags.push(pick.weather + ' weather');
+    if(pick.injury && pick.injury !== 'none') flags.push('injury: ' + pick.injury);
+    if(pick.oppInjury) flags.push('opponent missing a starter');
+
+    card.className = 'rec-card' + (pick.score < 60 ? ' warn' : '');
+    card.innerHTML = `
+      <h3>${entry.name}</h3>
+      <div class="rec-pick">${pick.team}</div>
+      <div class="rec-prob">vs ${pick.opponent} · adjusted score ${pick.score.toFixed(1)}</div>
+      <div class="rec-reason">${flags.length ? flags.join(' · ') : 'Clean situation.'}</div>
+      <button class="primary" style="margin-top:10px" data-lock="${entry.id}" data-team="${pick.team}">Lock this pick</button>
+    `;
+    recGrid.appendChild(card);
+  });
+
+  recGrid.querySelectorAll('[data-lock]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const entry = state.entries.find(x=>x.id==e.target.dataset.lock);
+      const team = e.target.dataset.team;
+      if(!entry.used.includes(team)) entry.used.push(team);
+      const weekGuess = prompt('Week number for this pick (for your log):', '');
+      state.history.push({week: weekGuess || '?', entryName: entry.name, team});
+      render(); saveState();
+      e.target.textContent = 'Locked ✓';
+      e.target.disabled = true;
+    });
+  });
 });
+
+loadState();
+render();
 </script>
 </body>
 </html>
