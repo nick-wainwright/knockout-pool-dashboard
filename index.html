@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Knockout Command — Dashboard</title>
+<style>
+  :root{
+    --field-dark:#0f2818; --field:#1b4332; --field-light:#2d6a4f;
+    --chalk:#f1faee; --chalk-dim:#c9d6cd; --gold:#e9b64a; --danger:#d64550;
+    --line: rgba(241,250,238,0.14);
+    --mono: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--field-dark); color:var(--chalk); font-family:var(--sans); padding:28px 18px 60px;}
+  .wrap{max-width:960px; margin:0 auto;}
+  .hero{border-bottom:3px solid var(--gold); padding-bottom:16px; margin-bottom:26px;}
+  h1{font-size:2.2rem; margin:0 0 4px; font-weight:800; letter-spacing:-0.02em;}
+  .tagline{color:var(--chalk-dim); font-size:.92rem; max-width:64ch;}
+  h2{font-size:1rem; color:var(--gold); border-left:4px solid var(--gold); padding-left:10px; margin:0 0 14px;}
+  section{margin-bottom:32px;}
+
+  .loader{
+    background:var(--field); border:1px dashed var(--line); border-radius:6px;
+    padding:20px; text-align:center; margin-bottom:24px;
+  }
+  .loader.hidden{display:none;}
+  .loader p{color:var(--chalk-dim); margin:0 0 12px; font-size:.85rem;}
+  input[type=file]{color:var(--chalk-dim); font-size:.85rem;}
+
+  #dashboard{display:none;}
+  #dashboard.visible{display:block;}
+
+  .entries{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px;}
+  .entry-card{background:var(--field); border-radius:6px; padding:16px; border:1px solid var(--line);}
+  .entry-card.eliminated{opacity:.45;}
+  .entry-card h3{margin:0 0 8px; font-size:1.05rem;}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; min-height:26px; margin-bottom:10px;}
+  .chip{background:var(--field-light); border:1px solid var(--line); border-radius:3px; padding:2px 8px; font-size:.78rem; font-family:var(--mono);}
+  .chip.empty{color:var(--chalk-dim); font-style:italic; font-family:var(--sans); border:none; background:none; padding:0;}
+  .entry-meta{font-size:.78rem; color:var(--chalk-dim); display:flex; justify-content:space-between; margin-bottom:8px;}
+  .entry-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  button{font-family:var(--sans); cursor:pointer; border:1px solid var(--line); background:var(--field-light); color:var(--chalk); border-radius:4px; padding:6px 10px; font-size:.78rem;}
+  button:hover{border-color:var(--gold);}
+  button.primary{background:var(--gold); color:var(--field-dark); font-weight:700; border-color:var(--gold);}
+  button.danger-btn{color:var(--danger); border-color:var(--danger); background:transparent;}
+
+  table{width:100%; border-collapse:collapse; font-size:.85rem;}
+  th{text-align:left; font-weight:600; color:var(--chalk-dim); font-size:.72rem; padding:6px 8px; border-bottom:1px solid var(--line);}
+  td{padding:6px 8px; border-bottom:1px solid var(--line);}
+
+  .add-pick{background:var(--field); border-radius:6px; padding:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:14px;}
+  .add-pick label{display:block; font-size:.72rem; color:var(--chalk-dim); margin-bottom:4px;}
+  .add-pick input, .add-pick select{background:var(--field-dark); border:1px solid var(--line); color:var(--chalk); padding:6px 8px; border-radius:4px; font-family:var(--sans); font-size:.85rem;}
+
+  .export-bar{display:flex; gap:10px; align-items:center; margin-top:24px; flex-wrap:wrap;}
+  .export-bar span{font-size:.78rem; color:var(--chalk-dim);}
+
+  footer{color:var(--chalk-dim); font-size:.72rem; margin-top:40px; border-top:1px solid var(--line); padding-top:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>Knockout Command</h1>
+    <div class="tagline">A visual read on your 3-entry pool state. This is a local file viewer/editor for the same <code>config.json</code> the CLI tool reads — nothing here fetches live odds; run <code>main.py</code> for that.</div>
+  </div>
+
+  <div class="loader" id="loaderBox">
+    <p>Load your <code>config.json</code> (found in the knockout_pool folder) to see your pool status.</p>
+    <input type="file" id="fileInput" accept="application/json">
+  </div>
+
+  <div id="dashboard">
+    <section>
+      <h2>Entries</h2>
+      <div class="entries" id="entriesWrap"></div>
+    </section>
+
+    <section>
+      <h2>Record a pick manually</h2>
+      <div class="add-pick">
+        <div>
+          <label>Entry</label>
+          <select id="pickEntry"></select>
+        </div>
+        <div>
+          <label>Team</label>
+          <input type="text" id="pickTeam" placeholder="e.g. Kansas City Chiefs">
+        </div>
+        <div>
+          <label>Week</label>
+          <input type="number" id="pickWeek" min="1" max="18" value="1" style="width:70px">
+        </div>
+        <button class="primary" id="addPickBtn">Lock pick</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Pick history</h2>
+      <table>
+        <thead><tr><th>Week</th><th>Entry</th><th>Team</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </section>
+
+    <div class="export-bar">
+      <button class="primary" id="exportBtn">Download updated config.json</button>
+      <span>Save this over the file in your knockout_pool folder so the CLI picks up your changes.</span>
+    </div>
+  </div>
+
+  <footer>
+    This page never talks to the network — everything happens in your browser and nothing is uploaded anywhere. Loading a file just reads it into memory; nothing is saved back to disk until you click "Download" and choose where to put it.
+  </footer>
+</div>
+
+<script>
+let state = null;
+
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt)=>{
+    try{
+      state = JSON.parse(evt.target.result);
+      if(!state.entries) throw new Error('missing entries');
+      document.getElementById('loaderBox').classList.add('hidden');
+      document.getElementById('dashboard').classList.add('visible');
+      render();
+    }catch(err){
+      alert('That doesn\'t look like a valid config.json: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+function render(){
+  renderEntries();
+  renderHistory();
+  renderPickEntryOptions();
+}
+
+function renderEntries(){
+  const wrap = document.getElementById('entriesWrap');
+  wrap.innerHTML = '';
+  state.entries.forEach((entry, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'entry-card' + (entry.eliminated ? ' eliminated' : '');
+    const used = entry.used || [];
+    const usedChips = used.length
+      ? used.map(t=>`<span class="chip">${t}</span>`).join('')
+      : `<span class="chip empty">no teams used yet</span>`;
+    card.innerHTML = `
+      <h3>${entry.name}</h3>
+      <div class="entry-meta">
+        <span>${entry.eliminated ? 'ELIMINATED' : 'Active'}</span>
+        <span>${entry.bye_week ? 'Bye: Wk '+entry.bye_week : 'Bye not used'}</span>
+      </div>
+      <div class="chips">${usedChips}</div>
+      <div class="entry-actions">
+        <button data-action="bye" data-idx="${idx}">Set bye week</button>
+        <button class="${entry.eliminated?'':'danger-btn'}" data-action="toggle-elim" data-idx="${idx}">${entry.eliminated?'Reactivate':'Mark eliminated'}</button>
+      </div>
+    `;
+    wrap.appendChild(card);
+  });
+
+  wrap.querySelectorAll('[data-action="toggle-elim"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const idx = parseInt(e.target.dataset.idx);
+      state.entries[idx].eliminated = !state.entries[idx].eliminated;
+      render();
+    });
+  });
+  wrap.querySelectorAll('[data-action="bye"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const idx = parseInt(e.target.dataset.idx);
+      const wk = prompt('Bye week (must be 6-12):', state.entries[idx].bye_week || '');
+      if(wk === null) return;
+      const n = parseInt(wk);
+      if(isNaN(n) || n < 6 || n > 12){
+        alert('Bye weeks can only be set between Week 6 and Week 12.');
+        return;
+      }
+      state.entries[idx].bye_week = n;
+      render();
+    });
+  });
+}
+
+function renderPickEntryOptions(){
+  const sel = document.getElementById('pickEntry');
+  sel.innerHTML = state.entries.map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');
+}
+
+function renderHistory(){
+  const body = document.getElementById('historyBody');
+  const hist = state.history || [];
+  if(hist.length === 0){
+    body.innerHTML = '<tr><td colspan="3" style="color:var(--chalk-dim)">No picks recorded yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = [...hist].reverse().map(h=>`<tr><td>${h.week}</td><td>${h.entry}</td><td>${h.team}</td></tr>`).join('');
+}
+
+document.getElementById('addPickBtn').addEventListener('click', ()=>{
+  const idx = parseInt(document.getElementById('pickEntry').value);
+  const team = document.getElementById('pickTeam').value.trim();
+  const week = parseInt(document.getElementById('pickWeek').value);
+  if(!team){ alert('Enter a team name.'); return; }
+  const entry = state.entries[idx];
+  entry.used = entry.used || [];
+  if(entry.used.includes(team)){
+    alert(`${entry.name} has already used ${team} this season.`);
+    return;
+  }
+  entry.used.push(team);
+  state.history = state.history || [];
+  state.history.push({week, entry: entry.name, team});
+  document.getElementById('pickTeam').value = '';
+  render();
+});
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'config.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
